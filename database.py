@@ -18,7 +18,8 @@ os.makedirs('data', exist_ok=True)
 #         "created_at": "2023-09-01T12:00:00",
 #         "end_date": "2023-09-10T12:00:00",
 #         "is_active": true,
-#         "winner_id": null
+#         "winners_count": 1,
+#         "winners": [null] или [123, 456] (ID победителей)
 #     }
 # }
 
@@ -52,7 +53,7 @@ def _save_json(file_path: str, data: Dict) -> None:
     with open(file_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-def create_raffle(message_id: int, text: str, end_date: str) -> str:
+def create_raffle(message_id: int, text: str, end_date: str, winners_count: int = 1) -> str:
     """Создает новый розыгрыш и возвращает его ID."""
     raffles = _load_json(RAFFLES_FILE)
     
@@ -63,7 +64,8 @@ def create_raffle(message_id: int, text: str, end_date: str) -> str:
         "created_at": datetime.now().isoformat(),
         "end_date": end_date,
         "is_active": True,
-        "winner_id": None
+        "winners_count": winners_count,
+        "winners": [None] * winners_count  # Список с None для каждого победителя
     }
     
     _save_json(RAFFLES_FILE, raffles)
@@ -126,14 +128,14 @@ def get_active_raffles() -> List[Dict[str, Any]]:
     
     return active_raffles
 
-def set_winner(raffle_id: str, winner_id: int) -> bool:
-    """Устанавливает победителя розыгрыша и закрывает его."""
+def set_winners(raffle_id: str, winner_ids: List[int]) -> bool:
+    """Устанавливает победителей розыгрыша и закрывает его."""
     raffles = _load_json(RAFFLES_FILE)
     
     if raffle_id not in raffles:
         return False
     
-    raffles[raffle_id]['winner_id'] = winner_id
+    raffles[raffle_id]['winners'] = winner_ids
     raffles[raffle_id]['is_active'] = False
     
     _save_json(RAFFLES_FILE, raffles)
@@ -157,4 +159,9 @@ def is_participant(raffle_id: str, user_id: int) -> bool:
     if raffle_id not in participants:
         return False
     
-    return str(user_id) in participants[raffle_id] 
+    return str(user_id) in participants[raffle_id]
+
+# Обратная совместимость со старым методом
+def set_winner(raffle_id: str, winner_id: int) -> bool:
+    """Устаревший метод для совместимости. Устанавливает одного победителя."""
+    return set_winners(raffle_id, [winner_id]) 
